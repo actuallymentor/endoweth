@@ -4,6 +4,11 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+/**
+ * @title Endoweth - an ERC-20 endowment contract that distributes tokens based on expected returns
+ * @author @actuallymentor aka mentor.eth
+ * @notice This contract is in beta and unaudited. Use at your own risk.
+ */
 contract Endoweth is Ownable {
 
     // Endowee is the address that receives the distributed tokens
@@ -102,7 +107,7 @@ contract Endoweth is Ownable {
     address[] public tokenList;
 
     /**
-     * @dev Add token to the endowment
+     * @dev Add ERC-20 token to the endowment. Adding a token means that the contract will distribute it based on the expected return. Tokens held by the address that are not in the token list will not be distributed.
      * @param token The address of the token
      * @param expectedReturn Percentage of expected annual return (e.g., 500 for 5%)
      */
@@ -116,7 +121,7 @@ contract Endoweth is Ownable {
     }
 
     /**
-     * @dev Remove token from the endowment
+     * @dev Remove token from the endowment. Removed tokens are not touched by the contract anymore.
      * @param token The address of the token
      */
     function removeToken(address token) external onlyOwnerOrAccountant {
@@ -175,20 +180,30 @@ contract Endoweth is Ownable {
      * @notice This function can be called by anyone
      */
     function triggerDistribution() public noReentrancy {
-        uint256 currentTime = block.timestamp;
+
+        // Check which tokens in the list are ready for distribution
         for (uint256 i = 0; i < tokenList.length; i++) {
+
+            // Get token info
             address token = tokenList[i];
+
+            // Calculate distributable amount based on return stats and whether the distribution interval passed
             uint256 distributableAmount = calculateDistributableAmount(token);
 
-            // Check for sufficient balance
+            // Check if the contract has enough tokens to distribute the calculated amount
             bool hasSufficientBalance = IERC20(token).balanceOf(address(this)) >= distributableAmount;
 
-            // Continue for every token with a distributable amount and sufficient balance
+            // If there is a distributable amount and the contract has enough tokens, distribute the tokens
             if (distributableAmount > 0 && hasSufficientBalance) {
+
+                // Transfer the tokens to the endowee
                 IERC20(token).transfer(endowee, distributableAmount);
+
+                // Update the accumulated balance and last distribution time
                 tokens[token].accumulatedBalance -= distributableAmount;
-                tokens[token].lastDistributionTime = currentTime;
+                tokens[token].lastDistributionTime = block.timestamp;
                 emit Distributed(token, distributableAmount);
+
             }
 
             // Emit an insufficient balance event if the contract does not have enough tokens
@@ -205,12 +220,62 @@ contract Endoweth is Ownable {
      * @return The amount of tokens that can be distributed
      */
     function calculateDistributableAmount(address token) internal view returns (uint256) {
+        
+        // Check if the expected return and last distribution time are set
         require(tokens[token].expectedAnnualReturn > 0, "Expected return not set");
         require(tokens[token].lastDistributionTime > 0, "Last distribution time not set");
+
+        // Calculate the time elapsed since the last distribution
         TokenInfo memory info = tokens[token];
+
+        // Calculate the seconds elapsed since the last distribution
         uint256 timeElapsed = block.timestamp - info.lastDistributionTime;
+
+        // Calculate the yearly distribution of this token based on the expected return
         uint256 yearlyDistribution = (info.accumulatedBalance * info.expectedAnnualReturn) / 10000;
+
+        // Calculate the distribution based on seconds passed since the last distribution
         return (yearlyDistribution * timeElapsed) / 365 days;
+
     }
+
+    /**
+     * @dev Helper function that returns the amount of tokens that have distributable amounts
+     * @return The amount of tokens that have distributable amounts
+     */
+    function getDistributableTokenCount() external view returns (uint256) {
+        uint256 count = 0;
+        for (uint256 i = 0; i < tokenList.length; i++) {
+            if (calculateDistributableAmount(tokenList[i]) > 0) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /**
+     * @dev Helper function that returns the distributable amounts of each token
+     * @return The distributable amounts of each token
+     */
+    function getDistributableAmounts() external view returns (address[] memory, uint256[] memory) {
+
+        // Create arrays to store tokens with distributable amounts and their amounts
+        address[] memory tokensWithDistributableAmounts = new address[](tokenList.length);
+        uint256[] memory distributableAmounts = new uint256[](tokenList.length);
+
+        // Iterate over the token list and calculate the distributable amount for each token
+        for (uint256 i = 0; i < tokenList.length; i++) {
+            uint256 distributableAmount = calculateDistributableAmount(tokenList[i]);
+            if (distributableAmount > 0) {
+                tokensWithDistributableAmounts[i] = tokenList[i];
+                distributableAmounts[i] = distributableAmount;
+            }
+        }
+
+        // Return the arrays, where the index of the address in the first array corresponds to the index of the amount in the second array
+        return (tokensWithDistributableAmounts, distributableAmounts);
+        
+    }
+
 }
 
