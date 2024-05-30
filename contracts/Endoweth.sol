@@ -65,9 +65,11 @@ contract Endoweth is Ownable, ReentrancyGuard {
      * @param accountant The address of the accountant
      */
     function addAccountant(address accountant) external onlyOwner {
-        // If the accountant is alread in the list, exit
+        // If the accountant is alread in the list, error
         for (uint i = 0; i < accountantsList.length; i++) {
-            if (accountantsList[i] == accountant) return;
+            if (accountantsList[i] == accountant) {
+                revert("Accountant already added");
+            }
         }
 
         // Mark address as accountant and add to accountant list
@@ -149,12 +151,14 @@ contract Endoweth is Ownable, ReentrancyGuard {
         require(tokens[token].expectedAnnualReturn > 0, "Token not managed");
         delete tokens[token];
         for (uint256 i = 0; i < tokenList.length; i++) {
-            if (tokenList[i] == token) {
-                tokenList[i] = tokenList[tokenList.length - 1];
-                tokenList.pop();
-                emit TokenRemoved(token);
-                break;
-            }
+            // If the token is not the one we're looking for, continue
+            if (tokenList[i] != token) continue;
+
+            // If the token is the one we're looking for, remove it from the list and break the loop
+            tokenList[i] = tokenList[tokenList.length - 1];
+            tokenList.pop();
+            emit TokenRemoved(token);
+            break;
         }
     }
 
@@ -208,7 +212,7 @@ contract Endoweth is Ownable, ReentrancyGuard {
      * @dev Trigger distribution of accumulated tokens
      * @notice This function can be called by anyone
      */
-    function triggerDistribution() public nonReentrant {
+    function triggerDistribution() external nonReentrant {
         // Check which tokens in the list are ready for distribution
         for (uint256 i = 0; i < tokenList.length; i++) {
             // Get token info
