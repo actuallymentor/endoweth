@@ -42,7 +42,7 @@ module.exports = buildModule( "EndowethModule", hardhat_module => {
 
     // Verification prompt
     console.log( `\n\nConsider verifying this contract by running:` )
-    console.log( `NODE_ENV=${ NODE_ENV } npx hardhat verify --network ${ network } DEPLOYED_ADDRESS_HERE ${ ENDOWETH_OWNER } ${ ENDOWETH_ENDOWEE } ${ ENDOWETH_DISTRIBUTION_INTERVAL_IN_S }\n\n` )
+    console.log( `DEPLOYED_ADDRESS=\nINITIAL_OWNER=\nNODE_ENV=${ NODE_ENV } npx hardhat verify --network ${ network } $DEPLOYED_ADDRESS $INITIAL_OWNER ${ ENDOWETH_ENDOWEE } ${ ENDOWETH_DISTRIBUTION_INTERVAL_IN_S }\n\n` )
 
     // Return contract
     return { deployed_endoweth }
