@@ -15,14 +15,25 @@ Automatically distribute<sup>1</sup> ERC-20 tokens based on their expected retur
 
 This project uses Hardhat and deploys using [Hardhat Ignition](https://hardhat.org/ignition/docs/getting-started#overview).
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a Hardhat Ignition module that deploys that contract.
+To do a test deploy on a local network:
 
-Try running some of the following tasks:
+1. Populate `.env.development` with the variables detailed in `.env.example`
+1. `npx hardhat node # start a local testnet node`
+1. `npx hardhat ignition deploy ignition/modules/Endoweth.js --network localhost`
 
-```shell
-npx hardhat help
-npx hardhat test
-REPORT_GAS=true npx hardhat test
-npx hardhat node
-npx hardhat ignition deploy ./ignition/modules/Lock.js
-```
+To deploy on a live chain:
+
+1. Populate `.env.production`, this may in theory be the same as your `.env.development`
+1. `NODE_ENV=production npx hardhat ignition deploy ignition/modules/Endoweth.js --network 42161`<sup><-- change the network as needed</sup>
+
+If you are making inreconcilable changes (like changing constructor parameters) to your ignition module, you can add `--reset` to your ignition command. This is not recommended, read about it [here](https://hardhat.org/ignition/docs/advanced/reconciliation).
+
+## Verification
+
+For complex or undocumented usecases, refer to the [hardhat verify plugin docs](https://hardhat.org/hardhat-runner/plugins/nomicfoundation-hardhat-verify).
+
+1. Populate the relevant `.env.{development,production}` entries
+1. `source .env.{development,production}`
+1. `NODE_ENV={development,production} npx hardhat verify --network NETWORK DEPLOYED_CONTRACT_ADDRESS "INITIAL_OWNER" "INITIAL_ENDOWEE" "INITIAL_DISTRIBUTION_INTERVAL"`
+
+Note that `NETWORK` is the key as defined in `hardhat.config.js`, for example `42161`. The `DEPLOYED_CONTRACT_ADDRESS` address is the address you deployed to.
